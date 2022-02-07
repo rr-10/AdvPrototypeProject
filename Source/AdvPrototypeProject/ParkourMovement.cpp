@@ -93,7 +93,7 @@ void UParkourMovement::WallRunUpdate()
 		CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 	}
 
-	if (WallRunMovement(Character->GetActorLocation(), leftEndPoint, 1.0f))
+	else if (WallRunMovement(Character->GetActorLocation(), leftEndPoint, 1.0f))
 	{
 		WallRunning = true;
 		WallRunningRight = false;
@@ -102,8 +102,7 @@ void UParkourMovement::WallRunUpdate()
 		// Interpolate gravity scale 
 		CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 	}
-
-	if (!WallRunning)
+	else if (WallRunning)
 	{
 		WallRunEnd(1.0f);
 	}
@@ -157,8 +156,10 @@ void UParkourMovement::WallRunJump()
 
 void UParkourMovement::WallRunEnd(float Delay)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Trying to end!"));
 	if (WallRunning)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Wall Run End!"));
 		WallRunning = false;
 		WallRunningLeft = false;
 		WallRunningRight = false;
