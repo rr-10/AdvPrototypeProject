@@ -4,6 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 #include "Math/UnrealMathUtility.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values for this component's properties
 UParkourMovement::UParkourMovement()
@@ -20,6 +21,7 @@ UParkourMovement::UParkourMovement()
 void UParkourMovement::BeginPlay()
 {
 	Super::BeginPlay();
+	CurrentMovementMode = EParkourMovement::None;
 
 	// ...
 
@@ -46,6 +48,7 @@ void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMove
 
 	//Begin the wall running checks
 	GetWorld()->GetTimerManager().SetTimer(WallRunUpdateTimer, this, &UParkourMovement::WallRunUpdate, 0.02f, true);
+	GetWorld()->GetTimerManager().SetTimer(VerticalWallRunTimer, this, &UParkourMovement::VerticalWallRunUpdate, 0.02f, true);
 }
 
 void UParkourMovement::JumpEvent()
@@ -56,12 +59,12 @@ void UParkourMovement::JumpEvent()
 void UParkourMovement::LandEvent()
 {
 	WallRunEnd(0.0f);
-	ResetWallRunSupression();
+	ResetSupression();
 }
 
 void UParkourMovement::CameraTick()
 {
-	if (WallRunningLeft)
+	/*if (WallRunningLeft)
 	{
 		CameraTilt(15.0f);
 	}
@@ -72,12 +75,106 @@ void UParkourMovement::CameraTick()
 	else
 	{
 		CameraTilt(0.0f);
+	}*/
+}
+
+void UParkourMovement::LaunchSuppressionTimer(float Delay)
+{
+	MovementSupressed = true;
+	GetWorld()->GetTimerManager().SetTimer(SuppressionTimer, this, &UParkourMovement::ResetSupression, Delay, false);
+}
+
+void UParkourMovement::VerticalWallRunUpdate()
+{
+	if (CanVerticalWallRun())
+	{
+		/// <summary>
+		/// Create a capsule shape and check for collision in that area using SweepMultiByChannel
+		/// </summary>
+
+		TArray<FHitResult> OutHits;
+
+		// Calculate the eye level checking position
+		FVector EyeLevel;
+		FRotator DontNeed;
+		Character->GetController()->GetActorEyesViewPoint(EyeLevel, DontNeed);
+		FVector EyeLevelWithOffset = (EyeLevel + FVector{ 0.0f,0.0f,50.0f }) + Character->GetActorForwardVector() * 50.0f; // Moved forward and up relative to the player 
+
+		// Calculate the feet level checking position
+		float HalfHeightMinusMantleHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - MantleHeight;
+		FVector FeetLevel = (Character->GetActorLocation() - FVector{ 0.0f,0.0f, HalfHeightMinusMantleHeight }) + Character->GetActorForwardVector() * 50.0f;
+
+		FVector CapsuleExtents = { 0.0f, 20.0f, 10.0f }; // TODO : Set this to the correct values 
+
+		FCollisionShape CollisionCapsule = FCollisionShape::MakeCapsule(CapsuleExtents);
+
+		bool isHit = GetWorld()->SweepMultiByChannel(OutHits, EyeLevelWithOffset, FeetLevel, FQuat::Identity, ECC_WorldStatic, CollisionCapsule);
+
+		if (isHit)
+		{
+			MantleTraceDistance = OutHits[0].Distance;
+
+			if (CharacterMovement->IsWalkable(OutHits[0]))
+			{
+				// Perform the mantle 
+
+			}
+		}
+
+		// Wall Run Vertically 
+		VerticalWallRunMovement(FeetLevel);
 	}
+	else
+	{
+		VerticalWallRunEnd(SupressionDelayLength);
+	}
+}
+
+bool UParkourMovement::CanVerticalWallRun()
+{
+	float ForwardInput = FVector::DotProduct(Character->GetActorForwardVector(), CharacterMovement->GetLastInputVector());
+
+	if (ForwardInput > 0.0f && CharacterMovement->IsFalling() && (CurrentMovementMode == EParkourMovement::None || CurrentMovementMode == EParkourMovement::VerticalWallRun || IsWallingRunning()))
+	{
+		// Conditions met to be able to mantle 
+		return true;
+	}
+	return false;
+}
+
+void UParkourMovement::VerticalWallRunMovement(FVector Feet)
+{
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("WallTrace")), false, GetOwner());
+	TraceParams.bReturnPhysicalMaterial = false;
+
+	FVector End = Feet + (Character->GetActorForwardVector() * 50.0f);
+
+	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Feet, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
+
+	if (CanVerticalWallRun() && isHit)
+	{
+		WallRunNormal = HitResult.ImpactNormal;
+		CurrentMovementMode = EParkourMovement::VerticalWallRun;
+
+		// Stick to the wall and launch the player upwards 
+		Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, VerticalWallRunSpeed }, true, true);
+
+	}
+	else
+	{
+		VerticalWallRunEnd(0.35);
+	}
+}
+
+void UParkourMovement::VerticalWallRunEnd(float ResetTime)
+{
+	CurrentMovementMode = EParkourMovement::None;
 }
 
 void UParkourMovement::WallRunUpdate()
 {
-	if (WallRunSupressed)
+	if (MovementSupressed || !CharacterMovement->IsFalling())
 		return;
 
 	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -35.0f) + (Character->GetActorRightVector() * 75.0f);
@@ -85,29 +182,23 @@ void UParkourMovement::WallRunUpdate()
 
 	if (WallRunMovement(Character->GetActorLocation(), rightEndPoint, -1.0f))
 	{
-		WallRunning = true;
-		WallRunningRight = true;
-		WallRunningLeft = false;
+		CurrentMovementMode = EParkourMovement::WallRunningRight;
 
 		// Interpolate gravity scale 
 		CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 	}
-
 	else if (WallRunMovement(Character->GetActorLocation(), leftEndPoint, 1.0f))
 	{
-		WallRunning = true;
-		WallRunningRight = false;
-		WallRunningLeft = true;
+		CurrentMovementMode = EParkourMovement::WallRunningLeft;
 
 		// Interpolate gravity scale 
 		CharacterMovement->GravityScale = FMath::FInterpTo(CharacterMovement->GravityScale, WallRunTargetGravity, GetWorld()->DeltaTimeSeconds, 10.0f);
 	}
-	else if (WallRunning)
+	else if (IsWallingRunning())
 	{
-		WallRunEnd(1.0f);
+		WallRunEnd(SupressionDelayLength);
 	}
 }
-
 
 bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRunDirection)
 {
@@ -117,7 +208,7 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 
 	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
-	if (HitResult.bBlockingHit && CharacterMovement->IsFalling())
+	if (HitResult.bBlockingHit)
 	{
 		// Check that the hit is a valid wall 
 		WallRunNormal = HitResult.Normal;
@@ -144,9 +235,9 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 
 void UParkourMovement::WallRunJump()
 {
-	if (WallRunning)
+	if (IsWallingRunning())
 	{
-		WallRunEnd(0.3f);
+		WallRunEnd(0.3f); // This value is set to a lower level of delay to allow for bouncing from wall to wall 
 
 		//Launch the character off the wall
 		FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
@@ -157,15 +248,14 @@ void UParkourMovement::WallRunJump()
 void UParkourMovement::WallRunEnd(float Delay)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Trying to end!"));
-	if (WallRunning)
+	if (IsWallingRunning())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Wall Run End!"));
-		WallRunning = false;
-		WallRunningLeft = false;
-		WallRunningRight = false;
+		CurrentMovementMode = EParkourMovement::None;
 		CharacterMovement->GravityScale = DefaultGravity;
 
-		SupressWallRun(Delay); // TODO : Promote to variable 
+		// Start a timer that block parkour movement for a lenght of time 
+		LaunchSuppressionTimer(SupressionDelayLength);
 	}
 }
 
@@ -179,15 +269,15 @@ void UParkourMovement::CameraTilt(float TargetRoll)
 	Character->GetController()->SetControlRotation(FMath::RInterpTo(Character->GetController()->GetControlRotation(), CameraTargetRotation, GetWorld()->DeltaTimeSeconds, 10.0f));
 }
 
-void UParkourMovement::SupressWallRun(float Delay)
+
+void UParkourMovement::ResetSupression()
 {
-	WallRunSupressed = true;
-	GetWorld()->GetTimerManager().SetTimer(WallRunSuppressionTimer, this, &UParkourMovement::ResetWallRunSupression, Delay, false);
+	MovementSupressed = false;
+	GetWorld()->GetTimerManager().ClearTimer(SuppressionTimer);
 }
 
-void UParkourMovement::ResetWallRunSupression()
+bool UParkourMovement::IsWallingRunning()
 {
-	WallRunSupressed = false;
-	GetWorld()->GetTimerManager().ClearTimer(WallRunSuppressionTimer);
+	return (CurrentMovementMode == EParkourMovement::WallRunningLeft || CurrentMovementMode == EParkourMovement::WallRunningRight);
 }
 
