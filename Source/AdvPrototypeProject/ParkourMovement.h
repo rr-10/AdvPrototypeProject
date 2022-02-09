@@ -39,6 +39,10 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
+	//Toggle 
+	UPROPERTY(EditAnywhere, Category = "Toggle")
+		bool ShouldDoParkourMovement = true;
+
 	// General Options 
 	UPROPERTY(EditAnywhere, Category = "General")
 		float SupressionDelayLength = 1.0f;
@@ -80,6 +84,14 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void LandEvent();
+
+
+	UFUNCTION(BlueprintCallable)
+		void ToggleParkour();
+	UFUNCTION(BlueprintCallable)
+		void ToggleParkourOn();
+	UFUNCTION(BlueprintCallable)
+		void ToggleParkourOff();
 
 private:
 	UFUNCTION()

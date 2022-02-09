@@ -50,6 +50,26 @@ void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMove
 	GetWorld()->GetTimerManager().SetTimer(ParkourUpdateTimer, this, &UParkourMovement::ParkourMovementUpdate, 0.02f, true);
 }
 
+
+void UParkourMovement::ToggleParkour()
+{
+	ShouldDoParkourMovement = !ShouldDoParkourMovement;
+	WallRunEnd(1.0f);
+	VerticalWallRunEnd(1.0f);
+}
+
+void UParkourMovement::ToggleParkourOn()
+{
+	ShouldDoParkourMovement = true;
+}
+
+void UParkourMovement::ToggleParkourOff()
+{
+	ShouldDoParkourMovement = false;
+	WallRunEnd(1.0f);
+	VerticalWallRunEnd(1.0f);
+}
+
 void UParkourMovement::JumpEvent()
 {
 	WallRunJump();
@@ -79,6 +99,11 @@ void UParkourMovement::CameraTick()
 
 void UParkourMovement::ParkourMovementUpdate()
 {
+	if (!ShouldDoParkourMovement)
+	{
+		return;
+	}
+
 	WallRunUpdate();
 	VerticalWallRunUpdate();
 }
