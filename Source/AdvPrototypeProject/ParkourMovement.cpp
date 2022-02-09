@@ -32,11 +32,7 @@ void UParkourMovement::BeginPlay()
 void UParkourMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	
-
 	//CameraTick();
-
 }
 
 void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMovementComponent* MovementComponent)
@@ -105,7 +101,7 @@ void UParkourMovement::ParkourMovementUpdate()
 	}
 
 	WallRunUpdate();
-	VerticalWallRunUpdate();
+	//VerticalWallRunUpdate();
 }
 
 void UParkourMovement::LaunchSuppressionTimer(float Delay)
@@ -242,7 +238,9 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 		// Check that the hit is a valid wall 
 		WallRunNormal = HitResult.Normal;
 
-		if (WallRunNormal.Z > -0.52 && WallRunNormal.Z < 0.52)
+		TArray<UActorComponent*> ComponentResult = HitResult.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{"WallRunning"});
+
+		if ((WallRunNormal.Z > -0.52 && WallRunNormal.Z < 0.52) && (ComponentResult.Num() > 0))
 		{
 			// Stick to the wall 
 			FVector PushToWallVector = WallRunNormal * (WallRunNormal - Character->GetActorLocation()).Size();
