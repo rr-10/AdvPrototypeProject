@@ -86,6 +86,9 @@ private:
 		void CameraTick();
 
 	UFUNCTION()
+		void ParkourMovementUpdate();
+
+	UFUNCTION()
 		void LaunchSuppressionTimer(float Delay);
 
 	UFUNCTION()
@@ -132,10 +135,9 @@ private:
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = ParkourMovement)
-		TEnumAsByte<EParkourMovement> CurrentMovementMode;
+		EParkourMovement CurrentMovementMode;
 
-	FTimerHandle WallRunUpdateTimer;
-	FTimerHandle VerticalWallRunTimer;
+	FTimerHandle ParkourUpdateTimer;
 	FTimerHandle SuppressionTimer;
 	
 	bool MovementSupressed = false;

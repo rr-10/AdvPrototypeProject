@@ -33,22 +33,21 @@ void UParkourMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	
+
 	//CameraTick();
 
 }
 
 void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMovementComponent* MovementComponent)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Setting Values!"));
-
 	// Initialize Values 
 	Character = CharacterReference;
 	CharacterMovement = MovementComponent;
 	DefaultGravity = MovementComponent->GravityScale;
 
 	//Begin the wall running checks
-	GetWorld()->GetTimerManager().SetTimer(WallRunUpdateTimer, this, &UParkourMovement::WallRunUpdate, 0.02f, true);
-	GetWorld()->GetTimerManager().SetTimer(VerticalWallRunTimer, this, &UParkourMovement::VerticalWallRunUpdate, 0.02f, true);
+	GetWorld()->GetTimerManager().SetTimer(ParkourUpdateTimer, this, &UParkourMovement::ParkourMovementUpdate, 0.02f, true);
 }
 
 void UParkourMovement::JumpEvent()
@@ -76,6 +75,12 @@ void UParkourMovement::CameraTick()
 	{
 		CameraTilt(0.0f);
 	}*/
+}
+
+void UParkourMovement::ParkourMovementUpdate()
+{
+	WallRunUpdate();
+	VerticalWallRunUpdate();
 }
 
 void UParkourMovement::LaunchSuppressionTimer(float Delay)
@@ -117,14 +122,14 @@ void UParkourMovement::VerticalWallRunUpdate()
 			if (CharacterMovement->IsWalkable(OutHits[0]))
 			{
 				// Perform the mantle 
-
+				VerticalWallRunEnd(0.35f);
 			}
 		}
 
 		// Wall Run Vertically 
 		VerticalWallRunMovement(FeetLevel);
 	}
-	else
+	else if (!IsWallingRunning())
 	{
 		VerticalWallRunEnd(SupressionDelayLength);
 	}
@@ -159,7 +164,6 @@ void UParkourMovement::VerticalWallRunMovement(FVector Feet)
 
 		// Stick to the wall and launch the player upwards 
 		Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, VerticalWallRunSpeed }, true, true);
-
 	}
 	else
 	{
@@ -247,15 +251,13 @@ void UParkourMovement::WallRunJump()
 
 void UParkourMovement::WallRunEnd(float Delay)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Trying to end!"));
 	if (IsWallingRunning())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Wall Run End!"));
 		CurrentMovementMode = EParkourMovement::None;
 		CharacterMovement->GravityScale = DefaultGravity;
 
-		// Start a timer that block parkour movement for a lenght of time 
-		LaunchSuppressionTimer(SupressionDelayLength);
+		// Start a timer that block parkour movement for a length of time 
+		LaunchSuppressionTimer(Delay);
 	}
 }
 
