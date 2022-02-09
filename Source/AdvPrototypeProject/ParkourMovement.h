@@ -65,7 +65,7 @@ public:
 
 	// Wall Climbing Options 
 	UPROPERTY(EditAnywhere, Category = "Wall Climbing")
-		float MaximumWallClimbHeight = 120.0f;
+		float MaximumWallClimbHeight = 600.0f;
 	UPROPERTY(EditAnywhere, Category = "Wall Climbing")
 		float VerticalWallRunSpeed = 300.0f;
 
@@ -84,7 +84,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		void LandEvent();
-
 
 	UFUNCTION(BlueprintCallable)
 		void ToggleParkour();
@@ -155,6 +154,8 @@ private:
 	bool MovementSupressed = false;
 
 	FRotator CameraTargetRotation;
+
+	FVector VerticalRunStartPosition;
 
 	float MantleTraceDistance;
 	FVector WallRunNormal;
