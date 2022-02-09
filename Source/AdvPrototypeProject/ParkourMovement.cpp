@@ -27,7 +27,6 @@ void UParkourMovement::BeginPlay()
 
 }
 
-
 // Called every frame
 void UParkourMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -100,8 +99,10 @@ void UParkourMovement::ParkourMovementUpdate()
 		return;
 	}
 
+
 	WallRunUpdate();
-	//VerticalWallRunUpdate();
+
+	VerticalWallRunUpdate();
 }
 
 void UParkourMovement::LaunchSuppressionTimer(float Delay)
@@ -117,7 +118,9 @@ void UParkourMovement::VerticalWallRunUpdate()
 		/// <summary>
 		/// Create a capsule shape and check for collision in that area using SweepMultiByChannel
 		/// </summary>
-
+		/// 
+		
+	
 		TArray<FHitResult> OutHits;
 
 		// Calculate the eye level checking position
@@ -145,10 +148,10 @@ void UParkourMovement::VerticalWallRunUpdate()
 				// Perform the mantle 
 				VerticalWallRunEnd(0.35f);
 			}
-		}
 
-		// Wall Run Vertically 
-		VerticalWallRunMovement(FeetLevel);
+			// Wall Run Vertically 
+			VerticalWallRunMovement(FeetLevel);
+		}
 	}
 	else if (!IsWallingRunning())
 	{
@@ -160,7 +163,7 @@ bool UParkourMovement::CanVerticalWallRun()
 {
 	float ForwardInput = FVector::DotProduct(Character->GetActorForwardVector(), CharacterMovement->GetLastInputVector());
 
-	if (ForwardInput > 0.0f && CharacterMovement->IsFalling() && (CurrentMovementMode == EParkourMovement::None || CurrentMovementMode == EParkourMovement::VerticalWallRun || IsWallingRunning()))
+	if (ForwardInput > 0.0f && CharacterMovement->IsFalling() && (CurrentMovementMode == EParkourMovement::None || CurrentMovementMode == EParkourMovement::VerticalWallRun))
 	{
 		// Conditions met to be able to mantle 
 		return true;
