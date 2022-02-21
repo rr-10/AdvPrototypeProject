@@ -67,7 +67,15 @@ void UParkourMovement::ToggleParkourOff()
 
 void UParkourMovement::JumpEvent()
 {
-	WallRunJump();
+	switch (CurrentMovementMode)
+	{
+	case EParkourMovement::WallRunningLeft:
+	case EParkourMovement::WallRunningRight:
+		WallRunJump();
+		break;
+	case EParkourMovement::VerticalWallRun:
+		VerticalWallRunJump();
+	}
 }
 
 void UParkourMovement::LandEvent()
@@ -195,6 +203,14 @@ void UParkourMovement::VerticalWallRunMovement(FVector Feet)
 	{
 		VerticalWallRunEnd(0.35f);
 	}
+}
+
+void UParkourMovement::VerticalWallRunJump()
+{
+	// Jump back off the wall
+	//Launch the character off the wall
+	FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
+	Character->LaunchCharacter(JumpVector, false, true);
 }
 
 void UParkourMovement::VerticalWallRunEnd(float ResetTime)

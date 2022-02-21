@@ -117,6 +117,9 @@ private:
 		void VerticalWallRunMovement(FVector Feet);
 
 	UFUNCTION()
+		void VerticalWallRunJump();
+
+	UFUNCTION()
 		void VerticalWallRunEnd(float ResetTime);
 
 private:
