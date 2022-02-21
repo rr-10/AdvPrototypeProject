@@ -49,7 +49,7 @@ public:
 
 	// Wall Running Options 
 	UPROPERTY(EditAnywhere, Category = "Wall Running")
-		bool WallRunGravityEnabled = false;
+		bool WallRunGravityEnabled = true;
 
 	UPROPERTY(EditAnywhere, Category = "Wall Running")
 		float WallRunTargetGravity = 0.25f;
