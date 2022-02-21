@@ -67,13 +67,12 @@ void UParkourMovement::ToggleParkourOff()
 
 void UParkourMovement::JumpEvent()
 {
-	switch (CurrentMovementMode)
+	if (IsWallingRunning())
 	{
-	case EParkourMovement::WallRunningLeft:
-	case EParkourMovement::WallRunningRight:
 		WallRunJump();
-		break;
-	case EParkourMovement::VerticalWallRun:
+	}
+	else if (CurrentMovementMode == EParkourMovement::VerticalWallRun)
+	{
 		VerticalWallRunJump();
 	}
 }
@@ -211,6 +210,7 @@ void UParkourMovement::VerticalWallRunJump()
 	//Launch the character off the wall
 	FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
 	Character->LaunchCharacter(JumpVector, false, true);
+	VerticalWallRunEnd(SupressionDelayLength);
 }
 
 void UParkourMovement::VerticalWallRunEnd(float ResetTime)
@@ -281,14 +281,11 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 
 void UParkourMovement::WallRunJump()
 {
-	if (IsWallingRunning())
-	{
-		WallRunEnd(0.3f); // This value is set to a lower level of delay to allow for bouncing from wall to wall 
+	WallRunEnd(0.3f); // This value is set to a lower level of delay to allow for bouncing from wall to wall 
 
-		//Launch the character off the wall
-		FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
-		Character->LaunchCharacter(JumpVector, false, true);
-	}
+	//Launch the character off the wall
+	FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
+	Character->LaunchCharacter(JumpVector, false, true);
 }
 
 void UParkourMovement::WallRunEnd(float Delay)
