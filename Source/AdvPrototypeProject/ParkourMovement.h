@@ -8,7 +8,7 @@
 
 class UCharacterMovementComponent;
 
-UENUM(BlueprintType)
+UENUM(BlueprintType, Category = "Parkour")
 enum class EParkourMovement : uint8
 {
 	None UMETA(DisplayName = "None"),
@@ -71,8 +71,7 @@ public:
 
 	// Mantle Options 
 	UPROPERTY(EditAnywhere, Category = "Mantle")
-		float MantleHeight = 40.0f;
-
+		float MantleHeight = 70.0f;
 
 public:
 
@@ -91,7 +90,6 @@ public:
 		void ToggleParkourOn();
 	UFUNCTION(BlueprintCallable)
 		void ToggleParkourOff();
-
 private:
 	UFUNCTION()
 		void CameraTick();
@@ -121,6 +119,8 @@ private:
 
 	UFUNCTION()
 		void VerticalWallRunEnd(float ResetTime);
+	UFUNCTION()
+		void WallMantle(FVector Feet, FVector MantlePosition);
 
 private:
 	// Wall Running Functions
