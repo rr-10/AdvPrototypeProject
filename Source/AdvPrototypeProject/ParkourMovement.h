@@ -120,7 +120,7 @@ private:
 	UFUNCTION()
 		void VerticalWallRunEnd(float ResetTime);
 	UFUNCTION()
-		void WallMantle(FVector Feet, FVector MantlePosition);
+		void PerformWallMantle(FVector Feet, FVector MantlePosition);
 
 private:
 	// Wall Running Functions

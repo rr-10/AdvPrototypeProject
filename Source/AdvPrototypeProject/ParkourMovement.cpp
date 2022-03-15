@@ -43,7 +43,7 @@ void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMove
 	DefaultGravity = MovementComponent->GravityScale;
 
 	//Begin the wall running checks
-	GetWorld()->GetTimerManager().SetTimer(ParkourUpdateTimer, this, &UParkourMovement::ParkourMovementUpdate, 0.02f, true);
+	GetWorld()->GetTimerManager().SetTimer(ParkourUpdateTimer, this, &UParkourMovement::ParkourMovementUpdate, 0.05f, true);
 }
 
 
@@ -162,12 +162,17 @@ void UParkourMovement::VerticalWallRunUpdate()
 			if (MantleTraceDistance != 0 && CharacterMovement->IsWalkable(OutHit) && (CheckingLength - MantleTraceDistance) < MantleHeight)
 			{
 				// Perform the mantle
-				WallMantle(FeetLevel, OutHit.ImpactPoint);
+				PerformWallMantle(FeetLevel, OutHit.ImpactPoint);
 				//VerticalWallRunEnd(0.35f);
 			}
 
-			// Wall Run Vertically 
-			VerticalWallRunMovement(FeetLevel);
+			// Check for the component here to potentially avoid another trace
+			TArray<UActorComponent*> ComponentResult = OutHit.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallClimbing" });
+			if (ComponentResult.Num() > 0)
+			{
+				// Wall Run Vertically
+				VerticalWallRunMovement(FeetLevel);
+			}
 		}
 	}
 	else if (!IsWallingRunning())
@@ -200,25 +205,21 @@ void UParkourMovement::VerticalWallRunMovement(FVector Feet)
 
 	if (isHit)
 	{
-		TArray<UActorComponent*> ComponentResult = HitResult.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallClimbing" });
-		if ((ComponentResult.Num() > 0))
+		if (CurrentMovementMode == EParkourMovement::None)
 		{
-			if (CurrentMovementMode == EParkourMovement::None)
-			{
-				CurrentMovementMode = EParkourMovement::VerticalWallRun;
-				VerticalRunStartPosition = Character->GetActorLocation();
-			}
-			else if (Character->GetActorLocation().Z - VerticalRunStartPosition.Z > MaximumWallClimbHeight)
-			{
-				VerticalWallRunEnd(1.5f);
-				return;
-			}
-
-			WallRunNormal = HitResult.ImpactNormal;
-
-			// Stick to the wall and launch the player upwards 
-			Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, VerticalWallRunSpeed }, true, true);
+			CurrentMovementMode = EParkourMovement::VerticalWallRun;
+			VerticalRunStartPosition = Character->GetActorLocation();
 		}
+		else if (Character->GetActorLocation().Z - VerticalRunStartPosition.Z > MaximumWallClimbHeight) // Maximum climb height check
+		{
+			VerticalWallRunEnd(1.5f);
+			return;
+		}
+
+		WallRunNormal = HitResult.ImpactNormal;
+
+		// Stick to the wall and launch the player upwards 
+		Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, VerticalWallRunSpeed }, true, true);
 	}
 	else
 	{
@@ -241,9 +242,9 @@ void UParkourMovement::VerticalWallRunEnd(float ResetTime)
 	LaunchSuppressionTimer(ResetTime);
 }
 
-void UParkourMovement::WallMantle(FVector Feet, FVector MantlePosition)
+void UParkourMovement::PerformWallMantle(FVector Feet, FVector MantlePosition)
 {
-	// get the normal of the wall 
+	// Get the normal of the wall 
 	FHitResult HitResult;
 	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("WallTrace")), false, GetOwner());
 	TraceParams.bReturnPhysicalMaterial = false;
@@ -256,8 +257,8 @@ void UParkourMovement::WallMantle(FVector Feet, FVector MantlePosition)
 
 void UParkourMovement::WallRunUpdate()
 {
-	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -35.0f) + (Character->GetActorRightVector() * 75.0f);
-	FVector leftEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -35.0f) + (Character->GetActorRightVector() * -75.0f);
+	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -20.0f) + (Character->GetActorRightVector() * 90.0f);
+	FVector leftEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -20.0f) + (Character->GetActorRightVector() * -90.0f);
 
 	if (WallRunMovement(Character->GetActorLocation(), rightEndPoint, -1.0f))
 	{
