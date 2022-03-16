@@ -166,12 +166,15 @@ void UParkourMovement::VerticalWallRunUpdate()
 				//VerticalWallRunEnd(0.35f);
 			}
 
-			// Check for the component here to potentially avoid another trace
-			TArray<UActorComponent*> ComponentResult = OutHit.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallClimbing" });
-			if (ComponentResult.Num() > 0)
+			if (OutHit.GetActor() != NULL)
 			{
-				// Wall Run Vertically
-				VerticalWallRunMovement(FeetLevel);
+				// Check for the component here to potentially avoid another trace
+				TArray<UActorComponent*> ComponentResult = OutHit.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallClimbing" });
+				if (ComponentResult.Num() > 0)
+				{
+					// Wall Run Vertically
+					VerticalWallRunMovement(FeetLevel);
+				}
 			}
 		}
 	}
