@@ -176,6 +176,10 @@ void UParkourMovement::VerticalWallRunUpdate()
 					VerticalWallRunMovement(FeetLevel);
 				}
 			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("NO ACTOR"));
+			}
 		}
 	}
 	else if (!IsWallingRunning())
@@ -291,7 +295,7 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 
 	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
 
-	if (HitResult.bBlockingHit)
+	if (HitResult.bBlockingHit && HitResult.GetActor() != NULL)
 	{
 		// Check that the hit is a valid wall 
 		WallRunNormal = HitResult.Normal;
