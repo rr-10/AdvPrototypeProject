@@ -61,7 +61,7 @@ public:
 		float WallRunJumpHeight = 400.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Wall Running")
-		float WallRunJumpAwayDistance = 300.0f;
+		float WallRunJumpAwayDistance = 400.0f;
 
 	// Wall Climbing Options 
 	UPROPERTY(EditAnywhere, Category = "Wall Climbing")

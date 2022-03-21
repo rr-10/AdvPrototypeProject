@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Math/UnrealMathUtility.h"
 #include "Components/CapsuleComponent.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values for this component's properties
 UParkourMovement::UParkourMovement()
@@ -80,7 +81,11 @@ void UParkourMovement::JumpEvent()
 
 void UParkourMovement::LandEvent()
 {
-	WallRunEnd(0.0f);
+	if (IsWallingRunning())
+	{
+		WallRunEnd(0.0f);
+	}
+
 	ResetSupression();
 }
 
@@ -258,6 +263,7 @@ void UParkourMovement::PerformWallMantle(FVector Feet, FVector MantlePosition)
 	Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, (MantlePosition - Character->GetActorLocation()).Size() * 6.5f }, true, true);
 }
 
+// Check each side of the player for walls that can be used for wall running 
 void UParkourMovement::WallRunUpdate()
 {
 	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -20.0f) + (Character->GetActorRightVector() * 90.0f);
@@ -286,16 +292,24 @@ void UParkourMovement::WallRunUpdate()
 bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRunDirection)
 {
 	FHitResult HitResult;
+	FCollisionShape CollisionBox = FCollisionShape::MakeBox(FVector{ 20.0f });
 	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("WallTrace")), false, GetOwner());
 	TraceParams.bReturnPhysicalMaterial = false;
 
-	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
+	FVector SweepStart = Start;
 
-	if (HitResult.bBlockingHit)
+	// Right Side 
+	FVector SweepEnd = End;
+
+	bool isHit = GetWorld()->SweepSingleByChannel(HitResult, SweepStart, SweepEnd, FQuat::Identity, ECC_WorldStatic, CollisionBox, TraceParams);
+	
+	if (isHit)
 	{
+		// Draw the collision box that hit
+		DrawDebugBox(GetWorld(), SweepEnd, CollisionBox.GetExtent(), FColor::Purple, true);
+
 		if (HitResult.GetActor() == NULL)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("NO ACTOR"));
 			return false;
 		}
 		// Check that the hit is a valid wall 
@@ -322,6 +336,48 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 
 	return false;
 }
+
+//TODO :: Check on left side 
+
+
+//bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRunDirection)
+//{
+//	FHitResult HitResult;
+//	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("WallTrace")), false, GetOwner());
+//	TraceParams.bReturnPhysicalMaterial = false;
+//
+//	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
+//
+//	if (HitResult.bBlockingHit)
+//	{
+//		if (HitResult.GetActor() == NULL)
+//		{
+//			return false;
+//		}
+//		// Check that the hit is a valid wall 
+//		WallRunNormal = HitResult.Normal;
+//
+//		TArray<UActorComponent*> ComponentResult = HitResult.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallRunning" });
+//
+//		if ((WallRunNormal.Z > -0.52 && WallRunNormal.Z < 0.52) && (ComponentResult.Num() > 0))
+//		{
+//			// Stick to the wall 
+//			FVector PushToWallVector = WallRunNormal * (WallRunNormal - Character->GetActorLocation()).Size();
+//			Character->LaunchCharacter(PushToWallVector, false, false);
+//
+//			// Move the player forward
+//			FVector WallUpCross = FVector::CrossProduct(WallRunNormal, { 0.0f,0.0f,1.0f });
+//			float Multi = WallRunSpeed * WallRunDirection;
+//
+//			FVector ForwardMovement = WallUpCross * Multi;
+//			Character->LaunchCharacter(ForwardMovement, true, !WallRunGravityEnabled);
+//
+//			return true;
+//		}
+//	}
+//
+//	return false;
+//}
 
 void UParkourMovement::WallRunJump()
 {
