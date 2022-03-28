@@ -266,8 +266,8 @@ void UParkourMovement::PerformWallMantle(FVector Feet, FVector MantlePosition)
 // Check each side of the player for walls that can be used for wall running 
 void UParkourMovement::WallRunUpdate()
 {
-	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -20.0f) + (Character->GetActorRightVector() * 90.0f);
-	FVector leftEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() * -20.0f) + (Character->GetActorRightVector() * -90.0f);
+	FVector rightEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() /** -20.0f*/) + (Character->GetActorRightVector() * 90.0f);
+	FVector leftEndPoint = Character->GetActorLocation() + (Character->GetActorForwardVector() /** -20.0f*/) + (Character->GetActorRightVector() * -90.0f);
 
 	if (WallRunMovement(Character->GetActorLocation(), rightEndPoint, -1.0f))
 	{
@@ -292,7 +292,7 @@ void UParkourMovement::WallRunUpdate()
 bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRunDirection)
 {
 	FHitResult HitResult;
-	FCollisionShape CollisionBox = FCollisionShape::MakeBox(FVector{ 20.0f });
+	FCollisionShape CollisionBox = FCollisionShape::MakeBox(FVector{ 30.0f });
 	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("WallTrace")), false, GetOwner());
 	TraceParams.bReturnPhysicalMaterial = false;
 
@@ -306,7 +306,7 @@ bool UParkourMovement::WallRunMovement(FVector Start, FVector End, float WallRun
 	if (isHit)
 	{
 		// Draw the collision box that hit
-		DrawDebugBox(GetWorld(), SweepEnd, CollisionBox.GetExtent(), FColor::Purple, true);
+		//DrawDebugBox(GetWorld(), SweepEnd, CollisionBox.GetExtent(), FColor::Purple, true);
 
 		if (HitResult.GetActor() == NULL)
 		{
