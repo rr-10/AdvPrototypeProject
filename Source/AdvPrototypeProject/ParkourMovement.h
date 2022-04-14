@@ -21,6 +21,13 @@ enum class EParkourMovement : uint8
 	Sprint UMETA(DisplayName = "Sprint")
 };
 
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStartedWallRunning);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStartedWallClimbing);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStoppedWallRunning);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStoppedWallClimbing);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMantle);
+
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class ADVPROTOTYPEPROJECT_API UParkourMovement : public UActorComponent
 {
@@ -37,7 +44,23 @@ protected:
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	
+	UPROPERTY(BlueprintAssignable)
+		FStartedWallRunning OnStartedWallRunning;
+	UPROPERTY(BlueprintAssignable)
+		FStoppedWallRunning OnStoppedWallRunning;
+	UPROPERTY(BlueprintAssignable)
+		FStartedWallClimbing OnStartedWallClimbing;
+	UPROPERTY(BlueprintAssignable)
+		FStoppedWallClimbing OnStoppedWallClimbing;
+	UPROPERTY(BlueprintAssignable)
+		FMantle OnMantle;
 
+private:
+	UFUNCTION()
+		void TryBroadcastStartWallRun();
+	UFUNCTION()
+		void TryBroadcastStartWallClimb();
 public:
 	//Toggle 
 	UPROPERTY(EditAnywhere, Category = "Toggle")
@@ -45,7 +68,7 @@ public:
 
 	// General Options 
 	UPROPERTY(EditAnywhere, Category = "General")
-		float SupressionDelayLength = 1.0f;
+		float SuppressionDelayLength = 1.0f;
 
 	// Wall Running Options 
 	UPROPERTY(EditAnywhere, Category = "Wall Running")

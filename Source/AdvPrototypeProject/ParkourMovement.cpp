@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "DrawDebugHelpers.h"
 
+
 // Sets default values for this component's properties
 UParkourMovement::UParkourMovement()
 {
@@ -35,6 +36,23 @@ void UParkourMovement::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	//CameraTick();
 }
+
+void UParkourMovement::TryBroadcastStartWallRun()
+{
+	if (!IsWallingRunning())
+	{
+		OnStartedWallRunning.Broadcast();
+	}
+}
+
+void UParkourMovement::TryBroadcastStartWallClimb()
+{
+	if(CurrentMovementMode != EParkourMovement::VerticalWallRun)
+	{
+		OnStartedWallClimbing.Broadcast();
+	}
+}
+
 
 void UParkourMovement::Initialize(ACharacter* CharacterReference, UCharacterMovementComponent* MovementComponent)
 {
@@ -164,11 +182,18 @@ void UParkourMovement::VerticalWallRunUpdate()
 				UE_LOG(LogTemp, Warning, TEXT("NOT WALKABLE"));
 			}*/
 
-			if (MantleTraceDistance != 0 && CharacterMovement->IsWalkable(OutHit) && (CheckingLength - MantleTraceDistance) < MantleHeight)
+			if (CurrentMovementMode != EParkourMovement::Mantle && MantleTraceDistance != 0 && CharacterMovement->IsWalkable(OutHit) && (CheckingLength - MantleTraceDistance) < MantleHeight)
 			{
+				// Call the event for stopped wall climbing
+				if (CurrentMovementMode == EParkourMovement::VerticalWallRun)
+				{
+					OnStoppedWallClimbing.Broadcast();
+					//VerticalWallRunEnd(SuppressionDelayLength);
+				}
+				CurrentMovementMode = EParkourMovement::Mantle;
+				
 				// Perform the mantle
 				PerformWallMantle(FeetLevel, OutHit.ImpactPoint);
-				//VerticalWallRunEnd(0.35f);
 			}
 
 			if (OutHit.GetActor() != NULL)
@@ -177,15 +202,24 @@ void UParkourMovement::VerticalWallRunUpdate()
 				TArray<UActorComponent*> ComponentResult = OutHit.GetActor()->GetComponentsByTag(UActorComponent::StaticClass(), FName{ "WallClimbing" });
 				if (ComponentResult.Num() > 0)
 				{
+					
 					// Wall Run Vertically
 					VerticalWallRunMovement(FeetLevel);
+					return; 
 				}
 			}
 		}
 	}
-	else if (!IsWallingRunning())
+	else if (CurrentMovementMode == EParkourMovement::Mantle)
 	{
-		VerticalWallRunEnd(SupressionDelayLength);
+		CurrentMovementMode = EParkourMovement::None;
+	}
+	
+	//All checks for vertical wall run have failed 
+	if (CurrentMovementMode == EParkourMovement::VerticalWallRun)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("HERE HERE"));
+		VerticalWallRunEnd(SuppressionDelayLength);
 	}
 }
 
@@ -193,9 +227,9 @@ bool UParkourMovement::CanVerticalWallRun()
 {
 	float ForwardInput = FVector::DotProduct(Character->GetActorForwardVector(), CharacterMovement->GetLastInputVector());
 
-	if (ForwardInput > 0.0f && CharacterMovement->IsFalling() && (CurrentMovementMode == EParkourMovement::None || CurrentMovementMode == EParkourMovement::VerticalWallRun))
+	if (ForwardInput > 0.0f && CharacterMovement->IsFalling() && (CurrentMovementMode == EParkourMovement::None || CurrentMovementMode == EParkourMovement::VerticalWallRun || CurrentMovementMode == EParkourMovement::Mantle))
 	{
-		// Conditions met to be able to mantle 
+		// Conditions met to be able to climb
 		return true;
 	}
 	return false;
@@ -215,6 +249,7 @@ void UParkourMovement::VerticalWallRunMovement(FVector Feet)
 	{
 		if (CurrentMovementMode == EParkourMovement::None)
 		{
+			TryBroadcastStartWallClimb();
 			CurrentMovementMode = EParkourMovement::VerticalWallRun;
 			VerticalRunStartPosition = Character->GetActorLocation();
 		}
@@ -225,7 +260,7 @@ void UParkourMovement::VerticalWallRunMovement(FVector Feet)
 		}
 
 		WallRunNormal = HitResult.ImpactNormal;
-
+		
 		// Stick to the wall and launch the player upwards 
 		Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, VerticalWallRunSpeed }, true, true);
 	}
@@ -239,13 +274,19 @@ void UParkourMovement::VerticalWallRunJump()
 {
 	// Jump back off the wall
 	//Launch the character off the wall
+	UE_LOG(LogTemp, Warning, TEXT("V JUMP"));
 	FVector JumpVector = { WallRunJumpAwayDistance * WallRunNormal.X, WallRunJumpAwayDistance * WallRunNormal.Y, WallRunJumpHeight };
 	Character->LaunchCharacter(JumpVector, false, true);
-	VerticalWallRunEnd(SupressionDelayLength);
+	VerticalWallRunEnd(SuppressionDelayLength);
 }
 
 void UParkourMovement::VerticalWallRunEnd(float ResetTime)
 {
+	if (CurrentMovementMode == EParkourMovement::VerticalWallRun)
+	{
+		OnStoppedWallClimbing.Broadcast();
+	}
+	
 	CurrentMovementMode = EParkourMovement::None;
 	LaunchSuppressionTimer(ResetTime);
 }
@@ -259,8 +300,8 @@ void UParkourMovement::PerformWallMantle(FVector Feet, FVector MantlePosition)
 	FVector End = Feet + (Character->GetActorForwardVector() * 50.0f);
 	bool isHit = GetWorld()->LineTraceSingleByChannel(HitResult, Feet, End, ECollisionChannel::ECC_WorldStatic, TraceParams);
 	WallRunNormal = HitResult.ImpactNormal;
-
-	Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, (MantlePosition - Character->GetActorLocation()).Size() * 6.5f }, true, true);
+	OnMantle.Broadcast();
+	Character->LaunchCharacter(FVector{ WallRunNormal.X * -600.0f, WallRunNormal.Y * -600.0f, (MantlePosition - Character->GetActorLocation()).Size() * 9.0f }, true, true);
 }
 
 // Check each side of the player for walls that can be used for wall running 
@@ -271,6 +312,7 @@ void UParkourMovement::WallRunUpdate()
 
 	if (WallRunMovement(Character->GetActorLocation(), rightEndPoint, -1.0f))
 	{
+		TryBroadcastStartWallRun();
 		CurrentMovementMode = EParkourMovement::WallRunningRight;
 
 		// Interpolate gravity scale 
@@ -278,6 +320,7 @@ void UParkourMovement::WallRunUpdate()
 	}
 	else if (WallRunMovement(Character->GetActorLocation(), leftEndPoint, 1.0f))
 	{
+		TryBroadcastStartWallRun();
 		CurrentMovementMode = EParkourMovement::WallRunningLeft;
 
 		// Interpolate gravity scale 
@@ -285,7 +328,7 @@ void UParkourMovement::WallRunUpdate()
 	}
 	else if (IsWallingRunning())
 	{
-		WallRunEnd(SupressionDelayLength);
+		WallRunEnd(SuppressionDelayLength);
 	}
 }
 
@@ -397,6 +440,8 @@ void UParkourMovement::WallRunEnd(float Delay)
 
 		// Start a timer that block parkour movement for a length of time 
 		LaunchSuppressionTimer(Delay);
+
+		OnStoppedWallRunning.Broadcast();
 	}
 }
 
